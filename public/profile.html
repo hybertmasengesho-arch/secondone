@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile — Reasoning Hub</title>
+<link rel="stylesheet" href="/css/theme.css">
+<script>(function(){try{var t=localStorage.getItem('rh_theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+<style>
+  .profile-card{ max-width:440px; margin-top:22px; }
+  .profile-name{ font-family:'Newsreader',serif; font-style:italic; font-weight:600; font-size:22px; color:var(--ink); margin:0 0 16px; }
+  .profile-row{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--grid); }
+  .profile-row:last-child{ border-bottom:none; }
+  .profile-label{ font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); width:80px; flex:none; }
+  .profile-value{ font-size:14px; color:var(--ink); }
+  .profile-value a{ color:var(--blue); text-decoration:none; }
+  .profile-value a:hover{ text-decoration:underline; }
+  .empty-state{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--muted); padding:30px 0; text-align:center; }
+  .wa-badge{
+    display:inline-flex; align-items:center; gap:4px; font-family:'JetBrains Mono',monospace; font-size:10.5px;
+    font-weight:700; color:var(--green); background:var(--green-soft); border-radius:20px; padding:2px 9px; margin-left:8px;
+  }
+</style>
+</head>
+<body class="hub-body">
+<div id="siteNav"></div>
+
+<div class="hub-wrap">
+  <div class="hub-eyebrow">Public profile</div>
+  <h1 class="hub-h1" id="pageTitle">Profile</h1>
+
+  <div class="hub-card profile-card" id="profileCard"></div>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+function getToken(){ return localStorage.getItem('rh_token'); }
+
+function esc(s){
+  if(s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function normalizeInstagram(v){
+  if(!v) return null;
+  v = v.trim();
+  if(/^https?:\/\//i.test(v)) return v;
+  return 'https://instagram.com/' + v.replace(/^@/, '');
+}
+
+
+async function loadProfile(){
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  const card = document.getElementById('profileCard');
+  if(!id){ card.innerHTML = '<div class="empty-state">No profile specified.</div>'; return; }
+
+  const res = await fetch('/api/auth/users/' + encodeURIComponent(id), { headers: { Authorization: 'Bearer ' + getToken() } });
+  if(!res.ok){ card.innerHTML = '<div class="empty-state">Profile not found.</div>'; return; }
+  const data = await res.json();
+  const p = data.profile || {};
+
+  document.getElementById('pageTitle').textContent = p.name || 'Profile';
+
+  const rows = [];
+  if(p.phone) rows.push(['Phone', '<a href="tel:' + esc(p.phone.replace(/\s+/g,'')) + '">' + esc(p.phone) + '</a>' + (p.whatsapp ? '<span class="wa-badge">✓ WhatsApp</span>' : '')]);
+  if(p.contact_email) rows.push(['Email', '<a href="mailto:' + esc(p.contact_email) + '">' + esc(p.contact_email) + '</a>']);
+  const ig = normalizeInstagram(p.instagram);
+  if(ig) rows.push(['Instagram', '<a href="' + esc(ig) + '" target="_blank" rel="noopener">' + esc(p.instagram) + '</a>']);
+
+  let html = '<div class="profile-name">' + esc(p.name || 'Unnamed user') + '</div>';
+  if(!rows.length){
+    html += '<div class="empty-state">This user hasn\'t added any contact details.</div>';
+  } else {
+    html += rows.map(r => '<div class="profile-row"><div class="profile-label">' + r[0] + '</div><div class="profile-value">' + r[1] + '</div></div>').join('');
+  }
+  card.innerHTML = html;
+}
+
+(async function init(){
+  const user = await window.HubNav.init('', true);
+  if(!user) return;
+  loadProfile();
+})();
+</script>
+</body>
+</html>

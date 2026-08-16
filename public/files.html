@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Files — Reasoning Hub</title>
+<link rel="stylesheet" href="/css/theme.css">
+<script>(function(){try{var t=localStorage.getItem('rh_theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+<style>
+  .upload-card{
+    background:var(--panel); border:1.5px solid var(--grid); border-radius:12px; padding:20px; margin-top:22px;
+    transition:border-color .2s ease, box-shadow .2s ease;
+    opacity:0; transform:translateY(10px); animation:uploadCardIn .4s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  @keyframes uploadCardIn{ to{ opacity:1; transform:translateY(0); } }
+  .upload-card.drag{ border-color:var(--blue); box-shadow:0 0 0 4px var(--blue-soft); }
+  .upload-row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+  .upload-row input[type="file"]{ font-family:'Inter',sans-serif; font-size:13.5px; }
+  .checkbox-row{ display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--graphite); cursor:pointer; user-select:none; }
+  .checkbox-row input{ accent-color:var(--blue); cursor:pointer; }
+  .upload-btn{
+    background:var(--ink); color:var(--paper); border:none; border-radius:8px; padding:10px 18px;
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px; cursor:pointer;
+    transition:transform .12s ease, box-shadow .15s ease, opacity .15s ease;
+  }
+  .upload-btn:hover:not(:disabled){ transform:translateY(-1px); box-shadow:0 6px 14px rgba(30,42,74,0.18); }
+  .upload-btn:active:not(:disabled){ transform:translateY(0); }
+  .upload-btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .upload-hint{ font-size:12px; color:var(--muted); margin-top:8px; }
+  .upload-msg{ font-size:13px; margin-top:10px; display:none; }
+  .upload-msg.ok{ color:var(--green); display:block; animation:fadeIn .3s ease; }
+  .upload-msg.err{ color:var(--red); display:block; animation:filesShake .35s ease; }
+  @keyframes filesShake{
+    10%,90%{ transform:translateX(-1px); } 20%,80%{ transform:translateX(2px); }
+    30%,50%,70%{ transform:translateX(-4px); } 40%,60%{ transform:translateX(4px); }
+  }
+
+  .file-list{ margin-top:22px; display:grid; gap:10px; }
+  .file-row{
+    background:var(--panel); border:1.5px solid var(--grid); border-radius:10px; padding:14px 16px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    opacity:0; transform:translateY(6px); animation:fileRowIn .35s ease forwards;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .file-row:hover{ border-color:var(--blue); box-shadow:0 4px 14px rgba(30,42,74,0.08); }
+  @keyframes fileRowIn{ to{ opacity:1; transform:translateY(0); } }
+  .file-row.removing{ animation:fileRowOut .25s ease forwards; }
+  @keyframes fileRowOut{ to{ opacity:0; transform:translateX(12px) scale(.98); max-height:0; padding:0; margin:0; } }
+  .file-icon{
+    width:38px; height:38px; border-radius:8px; background:var(--blue-soft); color:var(--blue);
+    display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace;
+    font-size:10.5px; font-weight:700; flex:none;
+  }
+  .file-meta{ flex:1; min-width:160px; }
+  .file-name{ font-size:14px; font-weight:600; color:var(--ink); }
+  .file-sub{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-top:2px; }
+  .file-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .file-actions button, .file-actions a{
+    font-family:'Inter',sans-serif; font-size:12px; font-weight:600; padding:6px 12px; border-radius:6px;
+    border:1.5px solid var(--grid); background:var(--panel); cursor:pointer; color:var(--ink); text-decoration:none;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .file-actions button:hover, .file-actions a:hover{ border-color:var(--blue); color:var(--blue); }
+  .file-actions .danger:hover{ border-color:var(--red); color:var(--red); }
+  .public-tag{ font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:3px 9px; border-radius:20px; background:var(--blue-soft); color:var(--blue); }
+  .empty-state{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--muted); padding:30px 0; text-align:center; }
+
+  @media (max-width:640px){
+    .upload-card{ padding:16px; }
+    .upload-row{ flex-direction:column; align-items:stretch; }
+    .upload-btn{ width:100%; }
+    .file-row{ padding:12px; }
+    .file-actions{ width:100%; }
+    .file-actions button, .file-actions a{ flex:1; text-align:center; }
+  }
+</style>
+</head>
+<body class="hub-body">
+<div id="siteNav"></div>
+
+<div class="hub-wrap">
+  <div class="hub-eyebrow">Your account</div>
+  <h1 class="hub-h1">My Files</h1>
+  <p class="hub-sub">Upload documents to keep in your account. Mark one public to share it with everyone on <a href="/public-files.html">Public Files</a>.</p>
+
+  <div class="upload-card">
+    <div class="trend-title" style="margin:0;">UPLOAD A FILE</div>
+    <div class="upload-row">
+      <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.odt,.txt,.md,.csv,.rtf,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif">
+      <label class="checkbox-row"><input type="checkbox" id="publicCheck"> Post to Public Files</label>
+      <button class="upload-btn" id="uploadBtn">Upload</button>
+    </div>
+    <div class="upload-row">
+      <input type="text" id="descInput" maxlength="500" placeholder="Description (optional) — what is this file, who's it for?" style="flex:1; min-width:240px; padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:'Inter',sans-serif; font-size:13.5px; color:var(--ink); background:var(--paper);">
+    </div>
+    <div class="upload-hint">PDF, Word (.doc/.docx), ODT, RTF, TXT, MD, CSV, or photos (JPG, PNG, WEBP, GIF, HEIC) — up to 4MB. No video or audio.</div>
+    <div class="upload-hint" id="usageHint"></div>
+    <div class="upload-msg" id="uploadMsg"></div>
+  </div>
+
+  <div class="file-list" id="fileList"></div>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+function getToken(){ return localStorage.getItem('rh_token'); }
+function authHeaders(extra){ return Object.assign({ Authorization: 'Bearer ' + getToken() }, extra || {}); }
+
+function fmtSize(bytes){
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1024*1024) return Math.round(bytes/1024) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+function extLabel(name){
+  const m = name.match(/\.([a-z0-9]+)$/i);
+  return m ? m[1].toUpperCase() : 'FILE';
+}
+function esc(s){
+  if(s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadFiles(){
+  const res = await fetch('/api/files/mine', { headers: authHeaders() });
+  const data = await res.json();
+  const list = document.getElementById('fileList');
+  const usageHint = document.getElementById('usageHint');
+  if(usageHint && typeof data.used === 'number' && typeof data.limit === 'number'){
+    usageHint.textContent = data.used + ' of ' + data.limit + ' saved documents used' + (data.used >= data.limit ? ' — limit reached, delete one to upload another, or ask an admin to raise your limit.' : '.');
+    usageHint.style.color = data.used >= data.limit ? 'var(--red)' : 'var(--muted)';
+  }
+  if(!data.files || !data.files.length){
+    list.innerHTML = '<div class="empty-state">No files yet — upload one above.</div>';
+    return;
+  }
+  list.innerHTML = data.files.map((f, i) => `
+    <div class="file-row" data-id="${f.id}" style="animation-delay:${Math.min(i * 0.05, 0.4)}s;">
+      <div class="file-icon">${extLabel(f.original_name)}</div>
+      <div class="file-meta">
+        <div class="file-name">${esc(f.original_name)} ${f.is_public ? '<span class="public-tag">public</span>' : ''}</div>
+        <div class="file-sub">${fmtSize(f.size_bytes)} · uploaded ${(f.created_at||'').slice(0,10)}</div>
+        ${f.description ? `<div class="file-sub" style="margin-top:4px; font-family:'Inter',sans-serif; font-size:12.5px; color:var(--graphite);">${esc(f.description)}</div>` : ''}
+      </div>
+      <div class="file-actions">
+        <a href="/api/files/${f.id}/download" target="_blank" rel="noopener">Open</a>
+        <button data-action="toggle" data-public="${f.is_public}">${f.is_public ? 'Make private' : 'Make public'}</button>
+        <button data-action="delete" class="danger">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('uploadBtn').addEventListener('click', async () => {
+  const input = document.getElementById('fileInput');
+  const msg = document.getElementById('uploadMsg');
+  msg.className = 'upload-msg';
+  if(!input.files[0]){ msg.textContent = 'Choose a file first.'; msg.classList.add('err'); return; }
+
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true; btn.textContent = 'Uploading…';
+
+  const form = new FormData();
+  form.append('file', input.files[0]);
+  form.append('isPublic', document.getElementById('publicCheck').checked ? 'true' : 'false');
+  form.append('description', document.getElementById('descInput').value || '');
+
+  try{
+    const res = await fetch('/api/files/upload', { method:'POST', headers: authHeaders(), body: form });
+    let data;
+    try { data = await res.json(); } catch(e){ throw new Error('Unexpected response from server.'); }
+    if(!res.ok) throw new Error(data.error || 'Upload failed');
+    msg.textContent = 'Uploaded.'; msg.classList.add('ok');
+    input.value = ''; document.getElementById('publicCheck').checked = false; document.getElementById('descInput').value = '';
+    loadFiles();
+  }catch(err){
+    msg.textContent = err.message; msg.classList.add('err');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Upload';
+  }
+});
+
+document.getElementById('fileList').addEventListener('click', async (e) => {
+  const row = e.target.closest('.file-row');
+  if(!row) return;
+  const id = row.getAttribute('data-id');
+
+  const toggleBtn = e.target.closest('button[data-action="toggle"]');
+  if(toggleBtn){
+    const nowPublic = toggleBtn.getAttribute('data-public') !== '1';
+    await fetch('/api/files/' + id, {
+      method:'PATCH',
+      headers: authHeaders({ 'Content-Type':'application/json' }),
+      body: JSON.stringify({ isPublic: nowPublic })
+    });
+    loadFiles();
+    return;
+  }
+
+  const delBtn = e.target.closest('button[data-action="delete"]');
+  if(delBtn){
+    if(!confirm('Delete this file? This cannot be undone.')) return;
+    row.classList.add('removing');
+    await fetch('/api/files/' + id, { method:'DELETE', headers: authHeaders() });
+    setTimeout(loadFiles, 220);
+  }
+});
+
+/* Drag-and-drop onto the upload card, purely as a convenience for picking
+   the same file the <input type="file"> would — no extra upload path. */
+(function initDragDrop(){
+  const card = document.querySelector('.upload-card');
+  const input = document.getElementById('fileInput');
+  if(!card || !input) return;
+  ['dragenter','dragover'].forEach(evt => card.addEventListener(evt, (e) => {
+    e.preventDefault(); e.stopPropagation(); card.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(evt => card.addEventListener(evt, (e) => {
+    e.preventDefault(); e.stopPropagation(); card.classList.remove('drag');
+  }));
+  card.addEventListener('drop', (e) => {
+    if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]){
+      input.files = e.dataTransfer.files;
+    }
+  });
+})();
+
+(async function init(){
+  const user = await window.HubNav.init('files', true);
+  if(!user) return;
+  loadFiles();
+})();
+</script>
+</body>
+</html>

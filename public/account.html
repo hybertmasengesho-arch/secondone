@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Center — Reasoning Hub</title>
+<link rel="stylesheet" href="/css/theme.css">
+<script>(function(){try{var t=localStorage.getItem('rh_theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+<style>
+  .acct-card{
+    max-width:480px; margin-top:22px; opacity:0; transform:translateY(10px);
+    animation:acctCardIn .45s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  @keyframes acctCardIn{ to{ opacity:1; transform:translateY(0); } }
+
+  .acct-field{
+    margin-bottom:16px; opacity:0; transform:translateY(8px);
+    animation:acctFieldIn .4s ease forwards;
+  }
+  /* Stagger each field's entrance slightly after the last. */
+  .acct-field:nth-child(1){ animation-delay:.06s; }
+  .acct-field:nth-child(2){ animation-delay:.12s; }
+  .acct-field:nth-child(3){ animation-delay:.18s; }
+  .acct-field:nth-child(4){ animation-delay:.24s; }
+  @keyframes acctFieldIn{ to{ opacity:1; transform:translateY(0); } }
+
+  .acct-field label{ display:block; font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .acct-field input{
+    width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px;
+    font-family:'Inter',sans-serif; font-size:14px; color:var(--ink); background:var(--paper);
+    transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .acct-field input:hover{ border-color:var(--muted); }
+  .acct-field input:focus{ outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+  .acct-hint{ font-size:11.5px; color:var(--muted); margin-top:5px; }
+
+  /* WhatsApp confirm box — hidden until a phone number is typed, then
+     slides/fades in just under the Phone field. */
+  .wa-confirm{
+    display:flex; align-items:center; gap:9px; margin-top:10px; padding:10px 12px;
+    background:var(--green-soft); border:1.5px solid transparent; border-radius:8px;
+    max-height:0; opacity:0; overflow:hidden; padding-top:0; padding-bottom:0; margin-top:0;
+    transition:max-height .35s ease, opacity .3s ease, padding .35s ease, margin-top .35s ease, border-color .2s ease;
+  }
+  .wa-confirm.show{ max-height:60px; opacity:1; padding-top:10px; padding-bottom:10px; margin-top:10px; }
+  .wa-confirm:has(input:checked){ border-color:var(--green); }
+  .wa-confirm input[type="checkbox"]{
+    width:17px; height:17px; accent-color:var(--green); cursor:pointer; flex:none;
+  }
+  .wa-confirm label{
+    font-family:'Inter',sans-serif; font-size:13px; color:var(--graphite); cursor:pointer; user-select:none;
+  }
+  .wa-confirm .wa-check{
+    display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px;
+    border-radius:50%; background:var(--green); color:#fff; font-size:10px; margin-left:4px;
+    opacity:0; transform:scale(.5); transition:opacity .2s ease, transform .2s ease;
+  }
+  .wa-confirm input:checked ~ .wa-check{ opacity:1; transform:scale(1); }
+
+  .acct-save{
+    background:var(--ink); color:var(--paper); border:none; border-radius:8px; padding:10px 20px;
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px; cursor:pointer; margin-top:4px;
+    transition:transform .12s ease, opacity .15s ease, box-shadow .15s ease;
+  }
+  .acct-save:hover:not(:disabled){ transform:translateY(-1px); box-shadow:0 6px 14px rgba(30,42,74,0.18); }
+  .acct-save:active:not(:disabled){ transform:translateY(0); }
+  .acct-save:disabled{ opacity:.5; cursor:not-allowed; }
+  .acct-msg{ font-size:13px; margin-top:12px; display:none; }
+  .acct-msg.ok{ color:var(--green); display:block; animation:fadeIn .3s ease; }
+  .acct-msg.err{ color:var(--red); display:block; animation:acctShake .35s ease; }
+  @keyframes acctShake{
+    10%,90%{ transform:translateX(-1px); } 20%,80%{ transform:translateX(2px); }
+    30%,50%,70%{ transform:translateX(-4px); } 40%,60%{ transform:translateX(4px); }
+  }
+
+  @media (max-width:560px){
+    .acct-card{ max-width:100%; padding:16px; }
+    .acct-save{ width:100%; }
+  }
+
+  .help-card{ margin-top:18px; animation-delay:.3s; }
+  .help-sub{ font-size:13px; color:var(--muted); margin:0 0 12px; line-height:1.5; }
+  #helpBody{
+    width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px;
+    font-family:'Inter',sans-serif; font-size:13.5px; color:var(--ink); background:var(--paper);
+    resize:vertical; min-height:80px; transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  #helpBody:hover{ border-color:var(--muted); }
+  #helpBody:focus{ outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+  .help-footer{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px; flex-wrap:wrap; }
+  .help-count{ font-size:11px; color:var(--muted); }
+  .help-count.limit{ color:var(--red); }
+  @media (max-width:560px){
+    .help-footer{ flex-direction:column-reverse; align-items:stretch; }
+    .help-footer .acct-save{ width:100%; }
+  }
+</style>
+</head>
+<body class="hub-body">
+<div id="siteNav"></div>
+
+<div class="hub-wrap">
+  <div class="hub-eyebrow">Your account</div>
+  <h1 class="hub-h1">Account Center</h1>
+  <p class="hub-sub">This info is shown to other users when they click your name on a public file you've posted. Leave anything blank to keep it private.</p>
+
+  <div class="hub-card acct-card">
+    <div class="acct-field">
+      <label for="fName">Name</label>
+      <input type="text" id="fName" maxlength="100" placeholder="Your name">
+    </div>
+    <div class="acct-field">
+      <label for="fPhone">Phone number</label>
+      <input type="text" id="fPhone" maxlength="40" placeholder="+250 7xx xxx xxx" autocomplete="off">
+      <div class="wa-confirm" id="waConfirm">
+        <input type="checkbox" id="fWhatsapp">
+        <label for="fWhatsapp">This number is on WhatsApp<span class="wa-check">✓</span></label>
+      </div>
+    </div>
+    <div class="acct-field">
+      <label for="fEmail">Email</label>
+      <input type="email" id="fEmail" maxlength="150" placeholder="you@example.com">
+      <div class="acct-hint">Shown to other users when they click your name — separate from your login email.</div>
+    </div>
+    <div class="acct-field">
+      <label for="fInsta">Instagram</label>
+      <input type="text" id="fInsta" maxlength="100" placeholder="@yourhandle or full profile link">
+      <div class="acct-hint">Enter just your handle (e.g. @hybert) or the full instagram.com link — either works.</div>
+    </div>
+    <button class="acct-save" id="saveBtn">Save changes</button>
+    <div class="acct-msg" id="acctMsg"></div>
+  </div>
+
+  <div class="hub-card acct-card help-card">
+    <div class="trend-title" style="margin:0 0 6px;">NEED HELP?</div>
+    <p class="help-sub">Send a message straight to an admin — they'll see it in their queue and can message you back.</p>
+    <textarea id="helpBody" maxlength="2000" rows="4" placeholder="What do you need help with?"></textarea>
+    <div class="help-footer">
+      <span class="help-count mono" id="helpCount">0 / 2000</span>
+      <button class="acct-save" id="helpSendBtn">Send to admin</button>
+    </div>
+    <div class="acct-msg" id="helpMsg"></div>
+  </div>
+</div>
+
+<script src="/js/nav.js"></script>
+<script>
+function getToken(){ return localStorage.getItem('rh_token'); }
+function authHeaders(extra){ return Object.assign({ Authorization: 'Bearer ' + getToken() }, extra || {}); }
+
+function refreshWaConfirmVisibility(){
+  const hasPhone = document.getElementById('fPhone').value.trim().length > 0;
+  document.getElementById('waConfirm').classList.toggle('show', hasPhone);
+  if(!hasPhone) document.getElementById('fWhatsapp').checked = false;
+}
+
+async function loadProfile(){
+  const res = await fetch('/api/auth/me', { headers: authHeaders() });
+  const data = await res.json();
+  const u = data.user || {};
+  document.getElementById('fName').value = u.name || '';
+  document.getElementById('fPhone').value = u.phone || '';
+  document.getElementById('fWhatsapp').checked = !!u.whatsapp;
+  document.getElementById('fEmail').value = u.contact_email || '';
+  document.getElementById('fInsta').value = u.instagram || '';
+  refreshWaConfirmVisibility();
+}
+
+document.getElementById('fPhone').addEventListener('input', refreshWaConfirmVisibility);
+
+const helpBody = document.getElementById('helpBody');
+const helpCount = document.getElementById('helpCount');
+helpBody.addEventListener('input', () => {
+  const n = helpBody.value.length;
+  helpCount.textContent = n + ' / 2000';
+  helpCount.classList.toggle('limit', n >= 2000);
+});
+
+document.getElementById('helpSendBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('helpMsg');
+  msg.className = 'acct-msg';
+  const body = helpBody.value.trim();
+  if(!body){ msg.textContent = 'Enter a message before sending.'; msg.classList.add('err'); return; }
+
+  const btn = document.getElementById('helpSendBtn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try{
+    const res = await fetch('/api/messages/help', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ body })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Could not send your message');
+    msg.textContent = 'Sent — an admin will get back to you.'; msg.classList.add('ok');
+    helpBody.value = ''; helpCount.textContent = '0 / 2000'; helpCount.classList.remove('limit');
+  }catch(err){
+    msg.textContent = err.message; msg.classList.add('err');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Send to admin';
+  }
+});
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('acctMsg');
+  msg.className = 'acct-msg';
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try{
+    const res = await fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        name: document.getElementById('fName').value,
+        phone: document.getElementById('fPhone').value,
+        instagram: document.getElementById('fInsta').value,
+        contactEmail: document.getElementById('fEmail').value,
+        whatsapp: document.getElementById('fPhone').value.trim() ? document.getElementById('fWhatsapp').checked : false
+      })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Could not save');
+    msg.textContent = 'Saved.'; msg.classList.add('ok');
+  }catch(err){
+    msg.textContent = err.message; msg.classList.add('err');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Save changes';
+  }
+});
+
+(async function init(){
+  const user = await window.HubNav.init('account', true);
+  if(!user) return;
+  loadProfile();
+})();
+</script>
+</body>
+</html>
